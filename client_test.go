@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 )
@@ -52,44 +51,7 @@ func TestWithProject_Empty(t *testing.T) {
 	}
 }
 
-// Integration test - only runs if credentials are available
-func TestGetTreeCoverage_Integration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Check if we have credentials via environment variables
-	if os.Getenv("GOOGLE_EARTH_ENGINE_PROJECT_ID") == "" {
-		t.Skip("Skipping integration test: GOOGLE_EARTH_ENGINE_PROJECT_ID not set")
-	}
-
-	ctx := context.Background()
-
-	// Create client using environment variables
-	client, err := NewClient(ctx,
-		WithServiceAccountEnv(),
-		WithProject(os.Getenv("GOOGLE_EARTH_ENGINE_PROJECT_ID")),
-	)
-	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
-	}
-
-	// Test location in Washington state (should have tree coverage)
-	latitude := 47.6
-	longitude := -120.9
-
-	coverage, err := client.GetTreeCoverage(ctx, latitude, longitude)
-	if err != nil {
-		t.Fatalf("Failed to get tree coverage: %v", err)
-	}
-
-	// Verify the coverage is within valid range
-	if coverage < 0 || coverage > 100 {
-		t.Errorf("Tree coverage out of range: %f (expected 0-100)", coverage)
-	}
-
-	t.Logf("Tree coverage at (%.2f, %.2f): %.2f%%", latitude, longitude, coverage)
-}
+// Note: Integration tests moved to helpers package (helpers/landcover_test.go)
 
 // Test with mock HTTP client
 func TestComputeValue_Success(t *testing.T) {
@@ -167,23 +129,4 @@ func TestComputeValue_Error(t *testing.T) {
 	}
 }
 
-func TestGetTreeCoverage_InvalidCoordinates(t *testing.T) {
-	client := &Client{
-		httpClient: http.DefaultClient,
-		projectID:  "test-project",
-	}
-
-	ctx := context.Background()
-
-	// Test invalid latitude
-	_, err := client.GetTreeCoverage(ctx, 100, -120)
-	if err == nil {
-		t.Error("Expected error for invalid latitude")
-	}
-
-	// Test invalid longitude
-	_, err = client.GetTreeCoverage(ctx, 47, -200)
-	if err == nil {
-		t.Error("Expected error for invalid longitude")
-	}
-}
+// Note: Coordinate validation tests moved to helpers package

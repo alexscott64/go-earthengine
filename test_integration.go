@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	ee "github.com/yourusername/go-earthengine"
+	"github.com/yourusername/go-earthengine/helpers"
 )
 
 // loadEnv loads environment variables from a .env file
@@ -67,7 +68,7 @@ func main() {
 		log.Fatalf("Failed to create Earth Engine client: %v", err)
 	}
 
-	fmt.Println("=== Testing Tree Coverage Query ===")
+	fmt.Println("=== Testing Tree Coverage Query (Helpers) ===")
 
 	// Test location in Washington state
 	latitude := 47.6
@@ -75,7 +76,7 @@ func main() {
 
 	fmt.Printf("Querying tree coverage at (%.4f, %.4f)...\n", latitude, longitude)
 
-	coverage, err := client.GetTreeCoverage(ctx, latitude, longitude)
+	coverage, err := helpers.TreeCoverage(client, latitude, longitude)
 	if err != nil {
 		log.Fatalf("Failed to get tree coverage: %v", err)
 	}
@@ -83,10 +84,10 @@ func main() {
 	fmt.Printf("SUCCESS! Tree Canopy Coverage: %.2f%%\n", coverage)
 
 	// Test with fluent API
-	fmt.Println("\n=== Testing Fluent API ===")
+	fmt.Println("\n=== Testing Fluent API (Direct) ===")
 
-	result, err := client.Image("USGS/NLCD/NLCD2016").
-		Select("percent_tree_cover").
+	result, err := client.Image("USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5").
+		Select("NLCD_Percent_Tree_Canopy_Cover").
 		ReduceRegion(
 			ee.NewPoint(longitude, latitude),
 			ee.ReducerFirst(),
@@ -99,4 +100,21 @@ func main() {
 	}
 
 	fmt.Printf("SUCCESS! Result: %v\n", result)
+
+	// Test other helpers
+	fmt.Println("\n=== Testing Other Helpers ===")
+
+	elevation, err := helpers.Elevation(client, latitude, longitude)
+	if err != nil {
+		log.Printf("Elevation query failed: %v", err)
+	} else {
+		fmt.Printf("Elevation: %.0f meters\n", elevation)
+	}
+
+	urban, err := helpers.IsUrban(client, latitude, longitude)
+	if err != nil {
+		log.Printf("Urban check failed: %v", err)
+	} else {
+		fmt.Printf("Is urban: %v\n", urban)
+	}
 }
