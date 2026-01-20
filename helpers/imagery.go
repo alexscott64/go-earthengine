@@ -554,8 +554,81 @@ func SpectralBandsWithContext(ctx context.Context, client *earthengine.Client, l
 		return nil, err
 	}
 
-	// Placeholder - requires date filtering and multi-band sampling
-	return nil, fmt.Errorf("SpectralBands requires date filtering support (not yet implemented)")
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Get bands to sample based on dataset
+	var bands []string
+	switch cfg.dataset {
+	case landsat8DatasetID, landsat9DatasetID:
+		// Landsat 8/9 surface reflectance bands
+		bands = []string{"SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"}
+	case sentinel2DatasetID:
+		// Sentinel-2 bands (10m, 20m, 60m)
+		bands = []string{"B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B9", "B11", "B12"}
+	case modisVIDatasetID:
+		// MODIS surface reflectance bands
+		bands = []string{"sur_refl_b01", "sur_refl_b02", "sur_refl_b03", "sur_refl_b04", "sur_refl_b05", "sur_refl_b06", "sur_refl_b07"}
+	default:
+		return nil, fmt.Errorf("unsupported dataset for spectral bands: %s", cfg.dataset)
+	}
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Get mean image
+	image := collection.Select(bands...).Reduce(earthengine.ReducerMean())
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point - this will return a dictionary with all band values
+	result, err := image.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		Compute(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute spectral bands: %w", err)
+	}
+
+	// Convert to map[string]float64
+	bandValues := make(map[string]float64)
+	for key, value := range result {
+		if floatVal, ok := value.(float64); ok {
+			// Remove "_mean" suffix added by Reduce
+			bandName := key
+			if len(key) > 5 && key[len(key)-5:] == "_mean" {
+				bandName = key[:len(key)-5]
+			}
+			bandValues[bandName] = floatVal
+		}
+	}
+
+	return bandValues, nil
 }
 
 // CompositeMethod represents different compositing methods.

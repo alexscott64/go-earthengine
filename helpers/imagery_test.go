@@ -155,6 +155,48 @@ func TestImageryDatasetConstants(t *testing.T) {
 	}
 }
 
+func TestSpectralBandsRequiresValidCoordinates(t *testing.T) {
+	_, err := SpectralBands(nil, 100, -122, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
+func TestNDVIRequiresValidCoordinates(t *testing.T) {
+	_, err := NDVI(nil, -95, 200, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
+func TestEVIRequiresValidCoordinates(t *testing.T) {
+	_, err := EVI(nil, 91, -122, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
+func TestSAVIRequiresValidCoordinates(t *testing.T) {
+	_, err := SAVI(nil, 45.5, 200, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
+func TestNDWIRequiresValidCoordinates(t *testing.T) {
+	_, err := NDWI(nil, -95, -122, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
+func TestNDBIRequiresValidCoordinates(t *testing.T) {
+	_, err := NDBI(nil, 100, -122, "2023-06-01")
+	if err == nil {
+		t.Error("Expected error for invalid coordinates")
+	}
+}
+
 func ExampleNDVI() {
 	// Example showing NDVI calculation
 	// client, _ := earthengine.NewClient(...)
