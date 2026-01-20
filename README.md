@@ -424,17 +424,37 @@ go test ./... -cover
 - Imagery helpers (structure)
 
 ### In Progress 🚧
-- Image band math support
-- ImageCollection filtering
-- Terrain algorithms (slope, aspect)
+- Image band math support (Add, Subtract, Multiply, Divide, NormalizedDifference, Expression)
+- ImageCollection filtering (FilterDate, FilterMetadata, Reduce, Count, Select)
 
 ### Planned 📋
-- Climate helpers (temperature, precipitation, ET)
-- Water helpers (detection, flow accumulation)
-- Fire helpers (active fires, burn severity)
-- Export helpers with progress tracking
-- Time-series analysis
-- Advanced compositing methods
+
+**Climate Helpers** (requires ImageCollection filtering):
+- `Temperature()` - Mean temperature over date range (TerraClimate, ERA5, GRIDMET)
+- `Precipitation()` - Total precipitation (CHIRPS, TerraClimate)
+- `Evapotranspiration()` - ET over date range (TerraClimate)
+- `SoilMoisture()` - Soil moisture content (SMAP)
+
+**Water Helpers** (requires ImageCollection filtering):
+- `WaterDetection()` - Check if location has water (JRC Global Surface Water)
+- `WaterFrequency()` - Water occurrence percentage (JRC)
+- `WaterOccurrence()` - Detailed water metrics (occurrence, seasonality, change)
+- `FlowAccumulation()` - Upstream flow accumulation (HydroSHEDS)
+
+**Fire Helpers** (requires ImageCollection filtering + band math):
+- `ActiveFire()` - Detect active fires (VIIRS, MODIS)
+- `FireCount()` - Count fire detections over period
+- `BurnSeverityAnalysis()` - Calculate dNBR and severity classification (Landsat)
+
+**Export Helpers** (requires long-running operation support):
+- `ExportImage()` - Export to Cloud Storage/Drive with progress tracking
+- `ExportTable()` - Export feature collections
+- `ExportVideo()` - Export time-lapse videos
+
+**Advanced Features**:
+- Time-series analysis and trend detection
+- Advanced compositing methods (median, quality mosaics)
+- Zonal statistics over polygons
 
 ## Contributing
 
