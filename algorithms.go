@@ -32,12 +32,13 @@ const (
 	AlgorithmGeometryPoint = "GeometryConstructors.Point"
 
 	// Reducer algorithms
-	AlgorithmReducerFirst = "Reducer.first"
-	AlgorithmReducerMean  = "Reducer.mean"
-	AlgorithmReducerSum   = "Reducer.sum"
-	AlgorithmReducerMin   = "Reducer.min"
-	AlgorithmReducerMax   = "Reducer.max"
-	AlgorithmReducerCount = "Reducer.count"
+	AlgorithmReducerFirst  = "Reducer.first"
+	AlgorithmReducerMean   = "Reducer.mean"
+	AlgorithmReducerMedian = "Reducer.median"
+	AlgorithmReducerSum    = "Reducer.sum"
+	AlgorithmReducerMin    = "Reducer.min"
+	AlgorithmReducerMax    = "Reducer.max"
+	AlgorithmReducerCount  = "Reducer.count"
 
 	// Terrain algorithms
 	AlgorithmTerrainSlope  = "Terrain.slope"

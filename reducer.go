@@ -26,6 +26,11 @@ func ReducerMean() Reducer {
 	return SimpleReducer{algorithmName: AlgorithmReducerMean}
 }
 
+// ReducerMedian returns a reducer that calculates the median value.
+func ReducerMedian() Reducer {
+	return SimpleReducer{algorithmName: AlgorithmReducerMedian}
+}
+
 // ReducerSum returns a reducer that calculates the sum of values.
 func ReducerSum() Reducer {
 	return SimpleReducer{algorithmName: AlgorithmReducerSum}

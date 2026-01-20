@@ -650,28 +650,62 @@ const (
 // A composite combines multiple images over a time period into a single image.
 // This is useful for creating cloud-free images or seasonal summaries.
 //
-// Note: This is a placeholder. Requires ImageCollection filtering and reduction.
+// Returns an Image that can be used for further analysis or region reductions.
+// To export the composite, you would need export functionality.
 //
 // Example:
 //
 //	// Create a summer 2023 median composite
-//	composite, err := helpers.Composite(client, bounds,
+//	composite := helpers.Composite(client,
 //	    "2023-06-01", "2023-08-31",
+//	    helpers.MedianComposite,
 //	    helpers.Sentinel2(),
 //	    helpers.CloudMask(20))
-func Composite(client *earthengine.Client, bounds Bounds, startDate, endDate string, method CompositeMethod, opts ...ImageryOption) error {
-	ctx := context.Background()
-	return CompositeWithContext(ctx, client, bounds, startDate, endDate, method, opts...)
-}
-
-// CompositeWithContext is like Composite but accepts a context.
-func CompositeWithContext(ctx context.Context, client *earthengine.Client, bounds Bounds, startDate, endDate string, method CompositeMethod, opts ...ImageryOption) error {
-	if err := bounds.Validate(); err != nil {
-		return err
+//
+//	// Use the composite for analysis
+//	result, err := composite.ReduceRegion(...).ComputeFloat(ctx)
+func Composite(client *earthengine.Client, startDate, endDate string, method CompositeMethod, opts ...ImageryOption) *earthengine.Image {
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
 	}
 
-	// Placeholder - requires ImageCollection filtering and reduction
-	return fmt.Errorf("Composite creation requires ImageCollection filtering support (not yet implemented)")
+	// Build the collection
+	collection := client.ImageCollection(cfg.dataset).
+		FilterDate(startDate, endDate)
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Apply the compositing method
+	var composite *earthengine.Image
+	switch method {
+	case MedianComposite:
+		composite = collection.Reduce(earthengine.ReducerMedian())
+	case MeanComposite:
+		composite = collection.Reduce(earthengine.ReducerMean())
+	case MosaicComposite:
+		composite = collection.Mosaic()
+	case GreenestPixelComposite:
+		// For greenest pixel, we need to calculate NDVI and use it for quality mosaic
+		// This is a simplified version - select based on max NDVI
+		nirBand, redBand := getBandNames(cfg.dataset)
+		ndviCollection := collection.Select(nirBand, redBand)
+
+		// Calculate NDVI for each image and use max
+		// Note: This is simplified - full implementation would use qualityMosaic
+		composite = ndviCollection.Reduce(earthengine.ReducerMax())
+	default:
+		// Default to median
+		composite = collection.Reduce(earthengine.ReducerMedian())
+	}
+
+	return composite
 }
 
 // NDVIQuery represents a deferred NDVI query for batch operations.

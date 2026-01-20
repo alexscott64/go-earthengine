@@ -424,16 +424,18 @@ go test ./... -cover
 - Image band math support (Add, Subtract, Multiply, Divide, NormalizedDifference, Expression)
 - ImageCollection filtering (FilterDate, FilterMetadata, Reduce, Count, Select)
 - Climate helpers (Temperature, Precipitation, SoilMoisture)
-- Imagery helpers (NDVI, EVI, SAVI, NDWI, NDBI)
+- Imagery helpers (NDVI, EVI, SAVI, NDWI, NDBI, SpectralBands, Composite)
 - Water helpers (WaterDetection, WaterOccurrence, WaterSeasonality, WaterChange)
 - Fire helpers (ActiveFire, FireCount, BurnSeverity, DeltaNBR)
+- Terrain algorithms (Slope, Aspect)
+- Export helpers (ExportImage, ExportTable, ExportVideo) - Configuration only
 
 ### Planned 📋
 
-**Export Helpers** (requires long-running operation support):
-- `ExportImage()` - Export to Cloud Storage/Drive with progress tracking
-- `ExportTable()` - Export feature collections
-- `ExportVideo()` - Export time-lapse videos
+**Export API Integration** (requires async task support):
+- Task submission and monitoring
+- Progress tracking for long-running exports
+- Async completion notifications
 
 **Advanced Features**:
 - Time-series analysis and trend detection
