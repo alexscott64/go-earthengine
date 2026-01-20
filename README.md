@@ -11,10 +11,14 @@ A production-grade Go client library for Google Earth Engine REST API with high-
 - ✅ **Complete REST API Client** - Full access to Earth Engine REST API v1
 - ✅ **High-Level Helpers** - Domain-specific convenience methods
 - ✅ **Batch Operations** - Parallel processing with concurrency control
+- ✅ **Checkpoint Resume** - Automatic save/resume for long-running operations
+- ✅ **Quota Tracking** - Monitor and limit daily API usage
+- ✅ **Built-in Caching** - In-memory cache for improved performance
 - ✅ **Real Datasets** - NLCD 2023, Hansen GFC, SRTM, Landsat, Sentinel-2
 - ✅ **Solar Calculations** - Sun position, sunrise/sunset, day length
 - ✅ **Type-Safe** - Idiomatic Go with comprehensive error handling
-- ✅ **Well Tested** - 109 tests with excellent coverage
+- ✅ **Well Tested** - 240+ tests with excellent coverage
+- ✅ **Real-World Examples** - Tree coverage, slope analysis, sun position
 
 ## Installation
 
@@ -140,6 +144,88 @@ for _, loc := range locations {
     result, err := helpers.TreeCoverage(client, loc.Lat, loc.Lon)
     // process result...
 }
+```
+
+### Resume from Checkpoint
+
+For long-running batch operations, automatically save and resume progress:
+
+```go
+// Create batch
+batch := helpers.NewBatch(client, 10)
+for _, loc := range locations {
+    batch.Add(helpers.NewTreeCoverageQuery(loc.Lat, loc.Lon))
+}
+
+// Execute with checkpoint support
+// If interrupted, will resume from where it left off
+results, err := helpers.ExecuteWithCheckpoint(ctx, batch, "progress.json", 10)
+
+// Clean up checkpoint after success
+if err == nil {
+    helpers.RemoveCheckpoint("progress.json")
+}
+
+// Check progress of existing checkpoint
+completed, total, _ := helpers.GetCheckpointProgress("progress.json")
+fmt.Printf("Progress: %d/%d (%.1f%%)\n",
+    completed, total, float64(completed)*100/float64(total))
+```
+
+### Quota Tracking
+
+Monitor and limit API usage:
+
+```go
+// Create quota tracker with daily limit
+tracker := earthengine.NewQuotaTracker(1000) // 1000 requests/day
+
+// Record each request
+tracker.RecordRequest()
+
+// Check quota status
+if tracker.IsQuotaExceeded() {
+    log.Fatalf("Daily quota exceeded")
+}
+
+// Get usage statistics
+stats := tracker.GetUsageStats()
+fmt.Printf("Today: %d requests\n", stats.TodayRequests)
+fmt.Printf("Remaining: %d requests\n", stats.RemainingQuota)
+fmt.Printf("Average: %.1f requests/hour\n", stats.RequestsPerHour)
+
+// Cleanup old data (keep last 30 days)
+tracker.CleanupOldData(30)
+```
+
+### Caching
+
+Cache Earth Engine query results for better performance:
+
+```go
+// Create in-memory cache (max 1000 entries)
+cache := earthengine.NewMemoryCache(1000)
+
+// Manual caching
+cacheKey := earthengine.CacheKey(lat, lon, date, "ndvi")
+if cached, found, _ := cache.Get(ctx, cacheKey); found {
+    result = cached.(float64)
+} else {
+    result, err = helpers.NDVI(client, lat, lon, date)
+    if err == nil {
+        cache.Set(ctx, cacheKey, result, 1*time.Hour)
+    }
+}
+
+// Use cached client wrapper
+cachedClient := earthengine.NewCachedClient(client, cache, 1*time.Hour)
+
+// Cache statistics
+stats := cache.Stats()
+fmt.Printf("Cache size: %d/%d entries\n", stats.Size, stats.MaxSize)
+
+// Clear cache
+cache.Clear(ctx)
 ```
 
 ## Domain Helpers
