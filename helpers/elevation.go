@@ -67,6 +67,13 @@ func USGS3DEP() ElevationOption {
 	}
 }
 
+// ElevationWithScale sets the scale (resolution) for elevation queries in meters.
+func ElevationWithScale(meters float64) ElevationOption {
+	return func(cfg *elevationConfig) {
+		cfg.scale = &meters
+	}
+}
+
 // Elevation returns the elevation in meters at the specified point.
 //
 // By default, uses SRTM 30m data. Use options to customize:
@@ -178,34 +185,13 @@ func SlopeWithContext(ctx context.Context, client *earthengine.Client, lat, lon 
 		opt(cfg)
 	}
 
-	// Get appropriate band and scale
-	var band string
-	var scale float64
-	switch cfg.dataset {
-	case srtmDatasetID:
-		band = srtmElevBand
-		scale = srtmDefaultScale
-	case asterDatasetID:
-		band = asterElevBand
-		scale = asterDefaultScale
-	case alosDatasetID:
-		band = alosElevBand
-		scale = alosDefaultScale
-	case usgs3DEPDatasetID:
-		band = usgs3DEPElevBand
-		scale = usgs3DEPDefaultScale
-	default:
-		return 0, fmt.Errorf("unknown dataset: %s", cfg.dataset)
-	}
-
-	if cfg.scale != nil {
-		scale = *cfg.scale
-	}
-
-	// Note: In the actual implementation, we would need to add Terrain.slope support to the client
-	// For now, this is a placeholder that shows the intended API
-	// The real implementation would use: ee.Terrain.slope(elevation)
-	_ = band // Will be used when terrain is implemented
+	// Note: Slope calculation requires Terrain.slope algorithm which is not yet implemented
+	// When implemented, it would:
+	// 1. Load the elevation dataset
+	// 2. Apply ee.Terrain.slope() to calculate slope
+	// 3. Sample at the point location
+	// For now, we return an error indicating the feature is coming soon
+	_ = cfg // Will be used when terrain is implemented
 
 	// Placeholder return - in real implementation, this would calculate slope using terrain algorithm
 	return 0, fmt.Errorf("slope calculation requires Terrain.slope algorithm support (not yet implemented)")
