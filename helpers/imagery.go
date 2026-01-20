@@ -84,6 +84,56 @@ func ImageryWithScale(meters float64) ImageryOption {
 	}
 }
 
+// getBandNames returns the NIR and Red band names for a given dataset.
+func getBandNames(dataset string) (nir, red string) {
+	switch dataset {
+	case landsat8DatasetID, landsat9DatasetID:
+		return "SR_B5", "SR_B4" // Landsat 8/9: B5=NIR, B4=Red
+	case sentinel2DatasetID:
+		return "B8", "B4" // Sentinel-2: B8=NIR, B4=Red
+	case modisVIDatasetID:
+		return "sur_refl_b02", "sur_refl_b01" // MODIS: b02=NIR, b01=Red
+	default:
+		return "SR_B5", "SR_B4" // Default to Landsat
+	}
+}
+
+// getBandNamesForWater returns the Green and NIR band names for NDWI calculation.
+func getBandNamesForWater(dataset string) (green, nir string) {
+	switch dataset {
+	case landsat8DatasetID, landsat9DatasetID:
+		return "SR_B3", "SR_B5" // Landsat: B3=Green, B5=NIR
+	case sentinel2DatasetID:
+		return "B3", "B8" // Sentinel-2: B3=Green, B8=NIR
+	default:
+		return "SR_B3", "SR_B5" // Default to Landsat
+	}
+}
+
+// getBandNamesForBuiltUp returns the SWIR and NIR band names for NDBI calculation.
+func getBandNamesForBuiltUp(dataset string) (swir, nir string) {
+	switch dataset {
+	case landsat8DatasetID, landsat9DatasetID:
+		return "SR_B6", "SR_B5" // Landsat: B6=SWIR1, B5=NIR
+	case sentinel2DatasetID:
+		return "B11", "B8" // Sentinel-2: B11=SWIR, B8=NIR
+	default:
+		return "SR_B6", "SR_B5" // Default to Landsat
+	}
+}
+
+// getBandNamesForEVI returns the NIR, Red, and Blue band names for EVI calculation.
+func getBandNamesForEVI(dataset string) (nir, red, blue string) {
+	switch dataset {
+	case landsat8DatasetID, landsat9DatasetID:
+		return "SR_B5", "SR_B4", "SR_B2" // Landsat: B5=NIR, B4=Red, B2=Blue
+	case sentinel2DatasetID:
+		return "B8", "B4", "B2" // Sentinel-2: B8=NIR, B4=Red, B2=Blue
+	default:
+		return "SR_B5", "SR_B4", "SR_B2" // Default to Landsat
+	}
+}
+
 // NDVI calculates the Normalized Difference Vegetation Index at a point.
 //
 // NDVI = (NIR - Red) / (NIR + Red)
@@ -93,11 +143,6 @@ func ImageryWithScale(meters float64) ImageryOption {
 //   - 0.2-0.5: Sparse vegetation, grassland
 //   - 0.5-0.8: Dense vegetation, forest
 //   - > 0.8: Very dense vegetation
-//
-// Note: This is a placeholder. The actual implementation requires:
-// 1. Image band math support (subtract, divide, normalizedDifference)
-// 2. Date-based filtering
-// 3. Cloud masking
 //
 // Example:
 //
@@ -125,10 +170,51 @@ func NDVIWithContext(ctx context.Context, client *earthengine.Client, lat, lon f
 		opt(cfg)
 	}
 
-	// Placeholder - requires image band math and filtering
-	_ = date
-	_ = cfg
-	return 0, fmt.Errorf("NDVI calculation requires image band math support (not yet implemented)")
+	// Get the appropriate band names for NIR and Red
+	nirBand, redBand := getBandNames(cfg.dataset)
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		// Use a 30-day window centered on the date
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Select NIR and Red bands, calculate NDVI using normalized difference
+	image := collection.
+		Select(nirBand, redBand).
+		Reduce(earthengine.ReducerMean()).
+		NormalizedDifference()
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point
+	result, err := image.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute NDVI: %w", err)
+	}
+
+	return result, nil
 }
 
 // EVI calculates the Enhanced Vegetation Index at a point.
@@ -153,8 +239,63 @@ func EVIWithContext(ctx context.Context, client *earthengine.Client, lat, lon fl
 		return 0, err
 	}
 
-	// Placeholder - requires image band math
-	return 0, fmt.Errorf("EVI calculation requires image band math support (not yet implemented)")
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Get the appropriate band names
+	nirBand, redBand, blueBand := getBandNamesForEVI(cfg.dataset)
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Get mean image and select required bands
+	image := collection.Select(nirBand, redBand, blueBand).Reduce(earthengine.ReducerMean())
+
+	// Calculate EVI using expression: 2.5 * ((NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1))
+	evi := image.Expression("2.5 * ((NIR - RED) / (NIR + 6*RED - 7.5*BLUE + 1))",
+		map[string]interface{}{
+			"NIR":  image.Select(nirBand + "_mean"),
+			"RED":  image.Select(redBand + "_mean"),
+			"BLUE": image.Select(blueBand + "_mean"),
+		})
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point
+	result, err := evi.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute EVI: %w", err)
+	}
+
+	return result, nil
 }
 
 // SAVI calculates the Soil-Adjusted Vegetation Index at a point.
@@ -179,8 +320,63 @@ func SAVIWithContext(ctx context.Context, client *earthengine.Client, lat, lon f
 		return 0, err
 	}
 
-	// Placeholder - requires image band math
-	return 0, fmt.Errorf("SAVI calculation requires image band math support (not yet implemented)")
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Get the appropriate band names
+	nirBand, redBand := getBandNames(cfg.dataset)
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Get mean image and select required bands
+	image := collection.Select(nirBand, redBand).Reduce(earthengine.ReducerMean())
+
+	// Calculate SAVI using expression: ((NIR - Red) / (NIR + Red + L)) * (1 + L)
+	// L = 0.5 (soil brightness correction factor)
+	savi := image.Expression("((NIR - RED) / (NIR + RED + 0.5)) * 1.5",
+		map[string]interface{}{
+			"NIR": image.Select(nirBand + "_mean"),
+			"RED": image.Select(redBand + "_mean"),
+		})
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point
+	result, err := savi.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute SAVI: %w", err)
+	}
+
+	return result, nil
 }
 
 // NDWI calculates the Normalized Difference Water Index at a point.
@@ -204,8 +400,59 @@ func NDWIWithContext(ctx context.Context, client *earthengine.Client, lat, lon f
 		return 0, err
 	}
 
-	// Placeholder - requires image band math
-	return 0, fmt.Errorf("NDWI calculation requires image band math support (not yet implemented)")
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Get the appropriate band names
+	greenBand, nirBand := getBandNamesForWater(cfg.dataset)
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Select Green and NIR bands, calculate NDWI using normalized difference
+	// NDWI = (Green - NIR) / (Green + NIR)
+	image := collection.
+		Select(greenBand, nirBand).
+		Reduce(earthengine.ReducerMean()).
+		NormalizedDifference()
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point
+	result, err := image.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute NDWI: %w", err)
+	}
+
+	return result, nil
 }
 
 // NDBI calculates the Normalized Difference Built-up Index at a point.
@@ -229,8 +476,59 @@ func NDBIWithContext(ctx context.Context, client *earthengine.Client, lat, lon f
 		return 0, err
 	}
 
-	// Placeholder - requires image band math
-	return 0, fmt.Errorf("NDBI calculation requires image band math support (not yet implemented)")
+	// Apply options
+	cfg := &imageryConfig{
+		dataset: landsat8DatasetID, // Default to Landsat 8
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Get the appropriate band names
+	swirBand, nirBand := getBandNamesForBuiltUp(cfg.dataset)
+
+	// Build the query
+	collection := client.ImageCollection(cfg.dataset)
+
+	// Apply date filtering
+	if cfg.dateRange != nil {
+		collection = collection.FilterDate(cfg.dateRange.Start, cfg.dateRange.End)
+	} else {
+		collection = collection.FilterDate(date, date)
+	}
+
+	// Apply cloud filtering if specified
+	if cfg.cloudCover != nil {
+		collection = collection.FilterMetadata("CLOUD_COVER", "less_than", *cfg.cloudCover)
+	}
+
+	// Select SWIR and NIR bands, calculate NDBI using normalized difference
+	// NDBI = (SWIR - NIR) / (SWIR + NIR)
+	image := collection.
+		Select(swirBand, nirBand).
+		Reduce(earthengine.ReducerMean()).
+		NormalizedDifference()
+
+	// Determine scale
+	scale := defaultImageryScale
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Sample at the point
+	result, err := image.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute NDBI: %w", err)
+	}
+
+	return result, nil
 }
 
 // SpectralBands returns the spectral band values at a point.

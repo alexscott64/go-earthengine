@@ -421,30 +421,14 @@ go test ./... -cover
 - Geometry helpers
 - Batch operations
 - Solar/astronomical helpers
-- Imagery helpers (structure)
-
-### In Progress 🚧
 - Image band math support (Add, Subtract, Multiply, Divide, NormalizedDifference, Expression)
 - ImageCollection filtering (FilterDate, FilterMetadata, Reduce, Count, Select)
+- Climate helpers (Temperature, Precipitation, SoilMoisture)
+- Imagery helpers (NDVI, EVI, SAVI, NDWI, NDBI)
+- Water helpers (WaterDetection, WaterOccurrence, WaterSeasonality, WaterChange)
+- Fire helpers (ActiveFire, FireCount, BurnSeverity, DeltaNBR)
 
 ### Planned 📋
-
-**Climate Helpers** (requires ImageCollection filtering):
-- `Temperature()` - Mean temperature over date range (TerraClimate, ERA5, GRIDMET)
-- `Precipitation()` - Total precipitation (CHIRPS, TerraClimate)
-- `Evapotranspiration()` - ET over date range (TerraClimate)
-- `SoilMoisture()` - Soil moisture content (SMAP)
-
-**Water Helpers** (requires ImageCollection filtering):
-- `WaterDetection()` - Check if location has water (JRC Global Surface Water)
-- `WaterFrequency()` - Water occurrence percentage (JRC)
-- `WaterOccurrence()` - Detailed water metrics (occurrence, seasonality, change)
-- `FlowAccumulation()` - Upstream flow accumulation (HydroSHEDS)
-
-**Fire Helpers** (requires ImageCollection filtering + band math):
-- `ActiveFire()` - Detect active fires (VIIRS, MODIS)
-- `FireCount()` - Count fire detections over period
-- `BurnSeverityAnalysis()` - Calculate dNBR and severity classification (Landsat)
 
 **Export Helpers** (requires long-running operation support):
 - `ExportImage()` - Export to Cloud Storage/Drive with progress tracking
