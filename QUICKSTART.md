@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-go get github.com/yourusername/go-earthengine
+go get github.com/alexscott64/go-earthengine
 ```
 
 ## Basic Usage
@@ -16,7 +16,7 @@ import (
     "fmt"
     "log"
 
-    ee "github.com/yourusername/go-earthengine"
+    ee "github.com/alexscott64/go-earthengine"
 )
 
 func main() {

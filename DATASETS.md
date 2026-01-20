@@ -4,7 +4,33 @@ This document lists commonly used datasets and how to access them with go-earthe
 
 ## Tree Canopy Cover (USA)
 
-### NLCD 2016 (Current Default)
+### NLCD 2023 Tree Canopy Cover (Latest - Now Default!)
+**Dataset ID**: `USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5`
+**Status**: ✅ **Working with library!**
+**Coverage**: Continental USA (Alaska, Hawaii, Puerto Rico coming 2025)
+**Years**: Annual data 1985-2023
+**Bands**: `NLCD_Percent_Tree_Canopy_Cover`, `Science_Percent_Tree_Canopy_Cover`
+**Resolution**: 30m
+
+**Documentation**: [Earth Engine Catalog](https://developers.google.com/earth-engine/datasets/catalog/USGS_NLCD_RELEASES_2023_REL_TCC_v2023-5)
+
+```go
+// Quick convenience method (uses NLCD 2023)
+coverage, err := client.GetTreeCoverage(ctx, latitude, longitude)
+
+// Or explicit ImageCollection query
+result, err := client.ImageCollection("USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5").
+    Mosaic().  // Combine all years (most recent on top)
+    Select("NLCD_Percent_Tree_Canopy_Cover").
+    ReduceRegion(
+        ee.NewPoint(lon, lat),
+        ee.ReducerFirst(),
+        ee.Scale(30),
+    ).
+    Compute(ctx)
+```
+
+### NLCD 2016 (Older, Still Available)
 **Dataset ID**: `USGS/NLCD/NLCD2016`
 **Status**: ✅ Working with library
 **Coverage**: Continental USA
@@ -13,26 +39,8 @@ This document lists commonly used datasets and how to access them with go-earthe
 **Resolution**: 30m
 
 ```go
-coverage, err := client.GetTreeCoverage(ctx, latitude, longitude)
-```
-
-### NLCD 2023 Tree Canopy Cover (Latest)
-**Dataset ID**: `USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5`
-**Status**: ⚠️ ImageCollection (requires filtering, not yet supported)
-**Coverage**: Continental USA (Alaska, Hawaii, Puerto Rico coming 2025)
-**Years**: Annual data 1985-2023
-**Bands**: `NLCD_Percent_Tree_Canopy_Cover`, `Science_Percent_Tree_Canopy_Cover`
-**Resolution**: 30m
-
-**Documentation**: [Earth Engine Catalog](https://developers.google.com/earth-engine/datasets/catalog/USGS_NLCD_RELEASES_2023_REL_TCC_v2023-5)
-
-To use this once ImageCollection support is added:
-```go
-// Future API (not yet implemented)
-coverage, err := client.ImageCollection("USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5").
-    FilterDate("2023-01-01", "2023-12-31").
-    First().
-    Select("NLCD_Percent_Tree_Canopy_Cover").
+result, err := client.Image("USGS/NLCD/NLCD2016").
+    Select("percent_tree_cover").
     ReduceRegion(...)
 ```
 

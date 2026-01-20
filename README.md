@@ -6,15 +6,17 @@ A simple, idiomatic Go library for Google Earth Engine's REST API. Query satelli
 
 - 🔐 **Service Account Authentication** - Support for JSON key files and environment variables
 - 🔗 **Fluent API** - Chainable methods for building Earth Engine queries
+- 📊 **ImageCollection Support** - Work with time series datasets (NLCD 2023, etc.)
 - 🌲 **Convenience Methods** - Quick helpers for common operations (tree coverage, etc.)
 - 📦 **Type-Safe** - Uses Go types instead of raw JSON manipulation
 - 🧪 **Well-Tested** - Comprehensive unit and integration tests
 - 🚀 **Minimal Dependencies** - Just Go standard library and Google OAuth2
+- 📅 **Latest Data** - Uses NLCD 2023 (annual data 1985-2023)
 
 ## Installation
 
 ```bash
-go get github.com/yourusername/go-earthengine
+go get github.com/alexscott64/go-earthengine
 ```
 
 ## Quick Start
@@ -27,7 +29,7 @@ import (
     "fmt"
     "log"
 
-    ee "github.com/yourusername/go-earthengine"
+    ee "github.com/alexscott64/go-earthengine"
 )
 
 func main() {
@@ -93,10 +95,10 @@ client, err := ee.NewClient(ctx,
 
 ## Usage Examples
 
-### Basic Query with Fluent API
+### Basic Query with Fluent API (Single Image)
 
 ```go
-// Query NLCD tree coverage at a specific point
+// Query older NLCD 2016 dataset (single image)
 result, err := client.Image("USGS/NLCD/NLCD2016").
     Select("percent_tree_cover").
     ReduceRegion(
@@ -107,6 +109,23 @@ result, err := client.Image("USGS/NLCD/NLCD2016").
     Compute(ctx)
 
 fmt.Printf("Tree coverage: %v\n", result["percent_tree_cover"])
+```
+
+### Working with ImageCollections (Latest NLCD 2023)
+
+```go
+// Query latest NLCD 2023 Tree Canopy Cover (ImageCollection)
+result, err := client.ImageCollection("USGS/NLCD_RELEASES/2023_REL/TCC/v2023-5").
+    Mosaic().  // Combine all years (most recent on top)
+    Select("NLCD_Percent_Tree_Canopy_Cover").
+    ReduceRegion(
+        ee.NewPoint(-120.9, 47.6),
+        ee.ReducerFirst(),
+        ee.Scale(30),
+    ).
+    Compute(ctx)
+
+fmt.Printf("Tree coverage (2023): %v\n", result["NLCD_Percent_Tree_Canopy_Cover"])
 ```
 
 ### Multiple Bands
