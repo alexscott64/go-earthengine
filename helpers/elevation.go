@@ -177,7 +177,7 @@ func SlopeWithContext(ctx context.Context, client *earthengine.Client, lat, lon 
 		return 0, err
 	}
 
-	// Get elevation image
+	// Get elevation configuration
 	cfg := &elevationConfig{
 		dataset: srtmDatasetID,
 	}
@@ -185,16 +185,52 @@ func SlopeWithContext(ctx context.Context, client *earthengine.Client, lat, lon 
 		opt(cfg)
 	}
 
-	// Note: Slope calculation requires Terrain.slope algorithm which is not yet implemented
-	// When implemented, it would:
-	// 1. Load the elevation dataset
-	// 2. Apply ee.Terrain.slope() to calculate slope
-	// 3. Sample at the point location
-	// For now, we return an error indicating the feature is coming soon
-	_ = cfg // Will be used when terrain is implemented
+	// Determine band name and scale based on dataset
+	var band string
+	var scale float64
 
-	// Placeholder return - in real implementation, this would calculate slope using terrain algorithm
-	return 0, fmt.Errorf("slope calculation requires Terrain.slope algorithm support (not yet implemented)")
+	switch cfg.dataset {
+	case srtmDatasetID:
+		band = srtmElevBand
+		scale = srtmDefaultScale
+	case asterDatasetID:
+		band = asterElevBand
+		scale = asterDefaultScale
+	case alosDatasetID:
+		band = alosElevBand
+		scale = alosDefaultScale
+	case usgs3DEPDatasetID:
+		band = usgs3DEPElevBand
+		scale = usgs3DEPDefaultScale
+	default:
+		return 0, fmt.Errorf("unknown dataset: %s", cfg.dataset)
+	}
+
+	// Override scale if provided
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Load the elevation image and select the elevation band
+	elevImage := client.Image(cfg.dataset).Select(band)
+
+	// Apply Terrain.slope to calculate slope in degrees
+	slopeImage := elevImage.Terrain(earthengine.AlgorithmTerrainSlope)
+
+	// Sample at the point
+	result, err := slopeImage.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute slope: %w", err)
+	}
+
+	return result, nil
 }
 
 // Aspect returns the aspect (compass direction of slope) in degrees at the specified point.
@@ -220,8 +256,60 @@ func AspectWithContext(ctx context.Context, client *earthengine.Client, lat, lon
 		return 0, err
 	}
 
-	// Placeholder - requires Terrain.aspect algorithm
-	return 0, fmt.Errorf("aspect calculation requires Terrain.aspect algorithm support (not yet implemented)")
+	// Get elevation configuration
+	cfg := &elevationConfig{
+		dataset: srtmDatasetID,
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Determine band name and scale based on dataset
+	var band string
+	var scale float64
+
+	switch cfg.dataset {
+	case srtmDatasetID:
+		band = srtmElevBand
+		scale = srtmDefaultScale
+	case asterDatasetID:
+		band = asterElevBand
+		scale = asterDefaultScale
+	case alosDatasetID:
+		band = alosElevBand
+		scale = alosDefaultScale
+	case usgs3DEPDatasetID:
+		band = usgs3DEPElevBand
+		scale = usgs3DEPDefaultScale
+	default:
+		return 0, fmt.Errorf("unknown dataset: %s", cfg.dataset)
+	}
+
+	// Override scale if provided
+	if cfg.scale != nil {
+		scale = *cfg.scale
+	}
+
+	// Load the elevation image and select the elevation band
+	elevImage := client.Image(cfg.dataset).Select(band)
+
+	// Apply Terrain.aspect to calculate aspect in degrees
+	aspectImage := elevImage.Terrain(earthengine.AlgorithmTerrainAspect)
+
+	// Sample at the point
+	result, err := aspectImage.
+		ReduceRegion(
+			earthengine.NewPoint(lon, lat),
+			earthengine.ReducerFirst(),
+			earthengine.Scale(scale),
+		).
+		ComputeFloat(ctx)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to compute aspect: %w", err)
+	}
+
+	return result, nil
 }
 
 // TerrainMetrics contains comprehensive terrain analysis results.

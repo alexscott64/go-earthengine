@@ -286,3 +286,19 @@ func (img *Image) Expression(expression string, vars map[string]interface{}) *Im
 		nodeID: exprNodeID,
 	}
 }
+
+// Terrain applies a terrain algorithm to an elevation image.
+// Use AlgorithmTerrainSlope or AlgorithmTerrainAspect as the algorithm parameter.
+func (img *Image) Terrain(algorithm string) *Image {
+	terrainNodeID := img.expr.FunctionCall(algorithm, map[string]interface{}{
+		"input": map[string]interface{}{
+			"valueReference": img.nodeID,
+		},
+	})
+
+	return &Image{
+		client: img.client,
+		expr:   img.expr,
+		nodeID: terrainNodeID,
+	}
+}

@@ -38,4 +38,8 @@ const (
 	AlgorithmReducerMin   = "Reducer.min"
 	AlgorithmReducerMax   = "Reducer.max"
 	AlgorithmReducerCount = "Reducer.count"
+
+	// Terrain algorithms
+	AlgorithmTerrainSlope  = "Terrain.slope"
+	AlgorithmTerrainAspect = "Terrain.aspect"
 )
