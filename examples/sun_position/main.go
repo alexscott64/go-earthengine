@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/yourusername/go-earthengine"
-	"github.com/yourusername/go-earthengine/helpers"
+	"github.com/alexscott64/go-earthengine"
+	"github.com/alexscott64/go-earthengine/helpers"
 )
 
 // This example demonstrates how to calculate sun position (azimuth and elevation)

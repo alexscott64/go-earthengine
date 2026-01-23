@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	ee "github.com/yourusername/go-earthengine"
+	ee "github.com/alexscott64/go-earthengine"
 )
 
 func main() {

@@ -3,7 +3,7 @@
 A production-grade Go client library for Google Earth Engine REST API with high-level domain-specific helpers.
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.18-blue)](https://go.dev/)
-[![Tests](https://img.shields.io/badge/tests-109%20passing-brightgreen)](https://github.com/yourusername/go-earthengine)
+[![Tests](https://img.shields.io/badge/tests-109%20passing-brightgreen)](https://github.com/alexscott64/go-earthengine)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Features
@@ -23,7 +23,7 @@ A production-grade Go client library for Google Earth Engine REST API with high-
 ## Installation
 
 ```bash
-go get github.com/yourusername/go-earthengine
+go get github.com/alexscott64/go-earthengine
 ```
 
 ## Quick Start
@@ -34,8 +34,8 @@ go get github.com/yourusername/go-earthengine
 import (
     "context"
     "fmt"
-    "github.com/yourusername/go-earthengine"
-    "github.com/yourusername/go-earthengine/helpers"
+    "github.com/alexscott64/go-earthengine"
+    "github.com/alexscott64/go-earthengine/helpers"
 )
 
 // Initialize client with service account
@@ -335,7 +335,7 @@ ndvi, err := helpers.NDVI(client, lat, lon, "2023-06-01",
 For advanced use cases, use the low-level API client directly:
 
 ```go
-import "github.com/yourusername/go-earthengine/apiv1"
+import "github.com/alexscott64/go-earthengine/apiv1"
 
 // Create service
 svc, err := apiv1.NewService(ctx,

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yourusername/go-earthengine"
-	"github.com/yourusername/go-earthengine/helpers"
+	"github.com/alexscott64/go-earthengine"
+	"github.com/alexscott64/go-earthengine/helpers"
 )
 
 // This example demonstrates how to analyze terrain slope for various use cases.

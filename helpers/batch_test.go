@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/go-earthengine"
+	"github.com/alexscott64/go-earthengine"
 )
 
 // mockQuery is a query that returns a predefined value or error

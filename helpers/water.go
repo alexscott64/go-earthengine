@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/yourusername/go-earthengine"
+	"github.com/alexscott64/go-earthengine"
 )
 
 // Water dataset constants

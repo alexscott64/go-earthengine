@@ -1,4 +1,4 @@
-module github.com/yourusername/go-earthengine
+module github.com/alexscott64/go-earthengine
 
 go 1.25.5
 

@@ -3,7 +3,7 @@ package helpers
 import (
 	"fmt"
 
-	"github.com/yourusername/go-earthengine"
+	"github.com/alexscott64/go-earthengine"
 )
 
 // Bounds represents a geographic bounding box.

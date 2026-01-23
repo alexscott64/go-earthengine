@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourusername/go-earthengine"
+	"github.com/alexscott64/go-earthengine"
 )
 
 // Batch represents a batch of Earth Engine queries that can be executed in parallel.

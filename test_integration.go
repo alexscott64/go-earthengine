@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	ee "github.com/yourusername/go-earthengine"
-	"github.com/yourusername/go-earthengine/helpers"
+	ee "github.com/alexscott64/go-earthengine"
+	"github.com/alexscott64/go-earthengine/helpers"
 )
 
 // loadEnv loads environment variables from a .env file

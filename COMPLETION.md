@@ -358,7 +358,7 @@ Helpers:        186 tests ✅
 
 ### Installation
 ```bash
-go get github.com/yourusername/go-earthengine
+go get github.com/alexscott64/go-earthengine
 ```
 
 ### Quick Example
@@ -368,8 +368,8 @@ package main
 import (
     "context"
     "fmt"
-    "github.com/yourusername/go-earthengine"
-    "github.com/yourusername/go-earthengine/helpers"
+    "github.com/alexscott64/go-earthengine"
+    "github.com/alexscott64/go-earthengine/helpers"
 )
 
 func main() {

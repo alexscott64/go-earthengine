@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	ee "github.com/yourusername/go-earthengine"
-	"github.com/yourusername/go-earthengine/helpers"
+	ee "github.com/alexscott64/go-earthengine"
+	"github.com/alexscott64/go-earthengine/helpers"
 )
 
 func main() {

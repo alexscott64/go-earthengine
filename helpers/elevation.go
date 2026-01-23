@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/yourusername/go-earthengine"
+	"github.com/alexscott64/go-earthengine"
 )
 
 // Elevation dataset constants
