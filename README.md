@@ -3,7 +3,7 @@
 A production-grade Go client library for Google Earth Engine REST API with high-level domain-specific helpers.
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.18-blue)](https://go.dev/)
-[![Tests](https://img.shields.io/badge/tests-109%20passing-brightgreen)](https://github.com/alexscott64/go-earthengine)
+[![Tests](https://img.shields.io/badge/tests-260%20passing-brightgreen)](https://github.com/alexscott64/go-earthengine)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Features
@@ -14,11 +14,12 @@ A production-grade Go client library for Google Earth Engine REST API with high-
 - ✅ **Checkpoint Resume** - Automatic save/resume for long-running operations
 - ✅ **Quota Tracking** - Monitor and limit daily API usage
 - ✅ **Built-in Caching** - In-memory cache for improved performance
+- ✅ **Async Export API** - Task submission, monitoring, progress tracking
 - ✅ **Real Datasets** - NLCD 2023, Hansen GFC, SRTM, Landsat, Sentinel-2
 - ✅ **Solar Calculations** - Sun position, sunrise/sunset, day length
 - ✅ **Type-Safe** - Idiomatic Go with comprehensive error handling
-- ✅ **Well Tested** - 240+ tests with excellent coverage
-- ✅ **Real-World Examples** - Tree coverage, slope analysis, sun position
+- ✅ **Well Tested** - 260 tests with excellent coverage
+- ✅ **Real-World Examples** - Tree coverage, slope analysis, sun position, exports
 
 ## Installation
 
@@ -226,6 +227,130 @@ fmt.Printf("Cache size: %d/%d entries\n", stats.Size, stats.MaxSize)
 
 // Clear cache
 cache.Clear(ctx)
+```
+
+### Async Export API
+
+Export Earth Engine data to Cloud Storage, Google Drive, or as Earth Engine Assets with full async task monitoring:
+
+```go
+// Simple image export
+task, err := helpers.ExportImageAsync(ctx, client, image,
+    helpers.ExportDescription("Summer 2023 NDVI"),
+    helpers.ExportToGCS("my-bucket", "exports/"),
+    helpers.ExportScale(30),
+    helpers.ExportCRS("EPSG:4326"),
+    helpers.ExportFileFormat(helpers.GeoTIFF))
+
+if err != nil {
+    log.Fatalf("Export failed: %v", err)
+}
+
+fmt.Printf("Export started: %s\n", task.ID)
+
+// Wait with progress tracking
+err = task.WaitWithProgress(ctx, func(progress *earthengine.TaskProgress) {
+    fmt.Printf("\rProgress: %.1f%% | State: %s",
+        progress.Progress*100,
+        progress.State)
+})
+
+if err != nil {
+    log.Fatalf("Export failed: %v", err)
+}
+
+fmt.Println("\nExport completed successfully!")
+
+// Export to different destinations
+taskGCS, _ := helpers.ExportImageAsync(ctx, client, image,
+    helpers.ExportDescription("Export to GCS"),
+    helpers.ExportToGCS("my-bucket", "exports/"))
+
+taskDrive, _ := helpers.ExportImageAsync(ctx, client, image,
+    helpers.ExportDescription("Export to Drive"),
+    helpers.ExportToGoogleDrive("Earth Engine Exports"))
+
+taskAsset, _ := helpers.ExportImageAsync(ctx, client, image,
+    helpers.ExportDescription("Export as Asset"),
+    helpers.ExportToEEAsset("projects/my-project/assets/my-image"))
+
+// Export with notification callback
+task, err := helpers.ExportImageWithNotification(ctx, client, image,
+    func(t *earthengine.Task, err error) {
+        if err != nil {
+            log.Printf("❌ Export failed: %v", err)
+            // Send email, trigger webhook, etc.
+        } else {
+            log.Printf("✓ Export completed: %s", t.ID)
+        }
+    },
+    helpers.ExportDescription("Export with Notification"),
+    helpers.ExportToGCS("my-bucket", "exports/"))
+
+// Batch exports with progress monitoring
+var tasks []*earthengine.Task
+for _, region := range regions {
+    task, err := helpers.ExportImageAsync(ctx, client, image,
+        helpers.ExportDescription(fmt.Sprintf("Export %s", region.name)),
+        helpers.ExportToGCS("my-bucket", fmt.Sprintf("regions/%s/", region.name)))
+
+    if err == nil {
+        tasks = append(tasks, task)
+    }
+}
+
+// Wait for all exports
+results := helpers.WaitForExports(ctx, tasks, func(completed, total int) {
+    fmt.Printf("\rExports completed: %d/%d (%.1f%%)",
+        completed, total, float64(completed)*100/float64(total))
+})
+
+// Check results
+successful := 0
+for i, result := range results {
+    if result.Error != nil {
+        log.Printf("❌ Export %d failed: %v\n", i+1, result.Error)
+    } else {
+        log.Printf("✓ Export %d completed: %s\n", i+1, result.TaskID)
+        successful++
+    }
+}
+
+fmt.Printf("\nSummary: %d/%d exports successful\n", successful, len(results))
+
+// Task management
+tm := earthengine.NewTaskManager(client)
+
+// Register tasks
+tm.RegisterTask(task)
+
+// List all tasks
+allTasks := tm.ListTasks()
+
+// Filter active tasks
+activeTasks := tm.FilterTasks(earthengine.TaskFilter{
+    States: []earthengine.TaskState{
+        earthengine.TaskStatePending,
+        earthengine.TaskStateRunning,
+    },
+})
+
+// Cancel all active tasks
+tm.CancelAll(ctx)
+
+// Cleanup old tasks (remove completed tasks older than 24 hours)
+tm.Cleanup(24 * time.Hour)
+
+// Export other data types
+tableTask, _ := helpers.ExportTableAsync(ctx, client, collection,
+    helpers.ExportDescription("Feature Collection Export"),
+    helpers.ExportToGCS("my-bucket", "tables/"),
+    helpers.ExportFileFormat(helpers.CSV))
+
+videoTask, _ := helpers.ExportVideoAsync(ctx, client, imageCollection,
+    helpers.ExportDescription("Time Lapse Video"),
+    helpers.ExportToGCS("my-bucket", "videos/"),
+    helpers.ExportFileFormat(helpers.MP4))
 ```
 
 ## Domain Helpers
@@ -474,7 +599,7 @@ go test ./apiv1 -v
 go test ./... -cover
 ```
 
-**Current Status**: 109 tests, all passing ✅
+**Current Status**: 260 tests, all passing ✅
 
 ## Datasets
 
@@ -515,13 +640,14 @@ go test ./... -cover
 - Fire helpers (ActiveFire, FireCount, BurnSeverity, DeltaNBR)
 - Terrain algorithms (Slope, Aspect)
 - Export helpers (ExportImage, ExportTable, ExportVideo) - Configuration only
+- Export API Integration with async task support:
+  - Task submission and monitoring
+  - Progress tracking for long-running exports
+  - Async completion notifications
+  - Batch export monitoring with WaitForExports
+  - Task management (filter, cancel, cleanup)
 
 ### Planned 📋
-
-**Export API Integration** (requires async task support):
-- Task submission and monitoring
-- Progress tracking for long-running exports
-- Async completion notifications
 
 **Advanced Features**:
 - Time-series analysis and trend detection
