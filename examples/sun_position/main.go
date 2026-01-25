@@ -118,7 +118,7 @@ func example2_DailySunPath(ctx context.Context, client *earthengine.Client) {
 
 	dayLength, err := helpers.DayLength(lat, date)
 	if err == nil {
-		fmt.Printf("Day Length: %.1f hours\n", dayLength)
+		fmt.Printf("Day Length: %.1f hours\n", dayLength.Hours())
 	}
 
 	fmt.Println()
@@ -283,7 +283,7 @@ func example5_SeasonalAnalysis(ctx context.Context, client *earthengine.Client) 
 
 		fmt.Printf("%-16s | %5.1f hrs | %11.1f°   | %s | %s\n",
 			season.name,
-			dayLength,
+			dayLength.Hours(),
 			sunPos.Elevation,
 			sunrise.Format("15:04"),
 			sunset.Format("15:04"))
@@ -326,7 +326,7 @@ func example6_BatchAnalysis(ctx context.Context, client *earthengine.Client) {
 		fmt.Printf("%-21s | %7.2f° | %7.1f hrs | %10.1f°\n",
 			loc.name,
 			loc.lat,
-			dayLength,
+			dayLength.Hours(),
 			sunPos.Elevation)
 	}
 

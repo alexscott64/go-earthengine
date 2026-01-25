@@ -3,7 +3,7 @@
 A production-grade Go client library for Google Earth Engine REST API with high-level domain-specific helpers.
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.18-blue)](https://go.dev/)
-[![Tests](https://img.shields.io/badge/tests-260%20passing-brightgreen)](https://github.com/alexscott64/go-earthengine)
+[![Tests](https://img.shields.io/badge/tests-332%20passing-brightgreen)](https://github.com/alexscott64/go-earthengine)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Features
@@ -17,9 +17,12 @@ A production-grade Go client library for Google Earth Engine REST API with high-
 - ✅ **Async Export API** - Task submission, monitoring, progress tracking
 - ✅ **Real Datasets** - NLCD 2023, Hansen GFC, SRTM, Landsat, Sentinel-2
 - ✅ **Solar Calculations** - Sun position, sunrise/sunset, day length
+- ✅ **Time-Series Analysis** - Trend detection, anomaly detection, seasonal decomposition
+- ✅ **Advanced Compositing** - Median, quality mosaics, percentile, greenest pixel
+- ✅ **Zonal Statistics** - Statistics over polygons, histograms, time series
 - ✅ **Type-Safe** - Idiomatic Go with comprehensive error handling
-- ✅ **Well Tested** - 260 tests with excellent coverage
-- ✅ **Real-World Examples** - Tree coverage, slope analysis, sun position, exports
+- ✅ **Well Tested** - 332 tests with excellent coverage
+- ✅ **Real-World Examples** - Tree coverage, time-series, compositing, zonal stats
 
 ## Installation
 
@@ -455,6 +458,154 @@ ndvi, err := helpers.NDVI(client, lat, lon, "2023-06-01",
 
 **Datasets**: Landsat 8/9, Sentinel-2, MODIS
 
+### Time-Series Analysis
+
+Analyze temporal data for trends, anomalies, and seasonal patterns:
+
+```go
+// Create time-series
+ts := &helpers.TimeSeries{
+    Name: "NDVI",
+    Points: []helpers.TimeSeriesPoint{
+        {Time: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), Value: 0.45},
+        {Time: time.Date(2020, 2, 1, 0, 0, 0, 0, time.UTC), Value: 0.48},
+        {Time: time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC), Value: 0.52},
+        // ... more data points
+    },
+}
+
+// Analyze trend
+trend, err := helpers.AnalyzeTrend(ts)
+fmt.Printf("Trend: %s (slope: %.4f, R²: %.3f, p-value: %.4f)\n",
+    trend.TrendDirection, trend.Slope, trend.RSquared, trend.PValue)
+
+// Detect anomalies using z-score
+anomalies := helpers.DetectAnomalies(ts, 3.0) // 3 standard deviations
+for _, a := range anomalies {
+    if a.IsAnomaly {
+        fmt.Printf("Anomaly at %s: %.3f (z-score: %.2f)\n",
+            a.Time.Format("2006-01-02"), a.Value, a.ZScore)
+    }
+}
+
+// Seasonal decomposition
+decomp, err := helpers.DecomposeTimeSeries(ts, 12) // 12-month cycle
+fmt.Printf("Trend: %v\n", decomp.Trend)
+fmt.Printf("Seasonal: %v\n", decomp.Seasonal)
+fmt.Printf("Residual: %v\n", decomp.Residual)
+
+// Change detection (compare before/after periods)
+change, err := helpers.DetectChange(beforeSeries, afterSeries)
+fmt.Printf("Change: %s (%.1f%%, p-value: %.4f)\n",
+    change.Direction, change.PercentDiff, change.PValue)
+
+// Aggregate time series
+monthly, err := helpers.AggregateTimeSeries(ts, "month", helpers.MeanAgg)
+```
+
+**Features**: Linear regression, R², p-values, z-score anomaly detection, seasonal decomposition, change detection
+
+### Advanced Compositing
+
+Create cloud-free composites using various methods:
+
+```go
+// Median composite (robust to outliers)
+composite, err := helpers.AdvancedComposite(ctx, client, collection,
+    helpers.CompositeConfig{
+        Method:         helpers.MedianComposite,
+        CloudThreshold: 20,
+        Scale:          10,
+    })
+
+// Quality mosaic (select pixels with best quality score)
+mosaic, err := helpers.QualityMosaic(ctx, client, collection, "quality_band")
+
+// Greenest pixel (maximum NDVI)
+greenest, err := helpers.CreateGreenestPixelComposite(ctx, client, collection)
+
+// Percentile composite
+p10, err := helpers.CreatePercentileComposite(ctx, client, collection, 10)  // 10th percentile
+p90, err := helpers.CreatePercentileComposite(ctx, client, collection, 90)  // 90th percentile
+
+// Seasonal composites
+seasons, err := helpers.SeasonalComposite(ctx, client, collection, 2023)
+spring := seasons["spring"]
+summer := seasons["summer"]
+
+// Multi-temporal composites (monthly, yearly)
+monthly, err := helpers.MultiTemporalComposite(ctx, client, collection,
+    "2023-01-01", "2023-12-31", "month")
+
+// Composite with outlier removal
+clean, err := helpers.CompositeWithOutlierRemoval(ctx, client, collection, 2.5)
+
+// Calculate composite quality metrics
+metrics, err := helpers.CalculateCompositeMetrics(ctx, client, composite)
+fmt.Printf("Mean observations: %.1f, Coverage: %.1f%%\n",
+    metrics.MeanObservations, metrics.Coverage*100)
+
+// Compare two composites
+diff, err := helpers.CompareComposites(ctx, client, composite1, composite2, "NDVI")
+fmt.Printf("Mean difference: %.3f, Max: %.3f, Changed: %.1f%%\n",
+    diff.MeanDifference, diff.MaxDifference, diff.PercentChanged)
+```
+
+**Methods**: Median, Mean, Min, Max, Percentile, Quality Mosaic, Greenest Pixel, Most Recent
+
+### Zonal Statistics
+
+Calculate statistics for image values within polygon boundaries:
+
+```go
+// Basic zonal statistics
+config := helpers.ZonalStatsConfig{
+    Statistics: []helpers.ZonalStatistic{
+        helpers.Mean,
+        helpers.StdDev,
+        helpers.Min,
+        helpers.Max,
+    },
+    Scale:     30,
+    Bands:     []string{"NDVI"},
+    ZoneIDKey: "zone_id",
+}
+
+result, err := helpers.CalculateZonalStats(ctx, client, image, zones, config)
+
+// Process results
+for _, zone := range result.Zones {
+    fmt.Printf("Zone %v: Mean=%.3f, StdDev=%.3f, Area=%.1f ha\n",
+        zone.ZoneID,
+        zone.Stats["NDVI_mean"],
+        zone.Stats["NDVI_stdDev"],
+        zone.Area/10000)
+}
+
+// Zonal histogram
+hist, err := helpers.CalculateZonalHistogram(ctx, client, image, zones,
+    "classification", 30)
+for zoneID, histogram := range hist {
+    fmt.Printf("Zone %v: %v\n", zoneID, histogram.Bins)
+}
+
+// Zonal time series
+series, err := helpers.CalculateZonalTimeSeries(ctx, client, collection,
+    zones, helpers.Mean, "NDVI", 30)
+for _, ts := range series {
+    fmt.Printf("Zone %v: %d observations\n", ts.ZoneID, len(ts.Series))
+}
+
+// Export results to CSV
+csv, err := helpers.ExportZonalStatsToCSV(result)
+err = os.WriteFile("zonal_stats.csv", []byte(csv), 0644)
+
+// Export as FeatureCollection
+fc, err := helpers.ExportZonalStatsToFeatureCollection(result)
+```
+
+**Statistics**: Mean, Sum, Count, Min, Max, Median, StdDev, Variance, Percentiles
+
 ## Low-Level API
 
 For advanced use cases, use the low-level API client directly:
@@ -599,7 +750,7 @@ go test ./apiv1 -v
 go test ./... -cover
 ```
 
-**Current Status**: 260 tests, all passing ✅
+**Current Status**: 332 tests, all passing ✅
 
 ## Datasets
 
@@ -646,13 +797,35 @@ go test ./... -cover
   - Async completion notifications
   - Batch export monitoring with WaitForExports
   - Task management (filter, cancel, cleanup)
+- Time-series analysis:
+  - Linear regression trend analysis
+  - Anomaly detection (z-score based)
+  - Seasonal decomposition
+  - Change detection (t-test)
+  - Time series aggregation
+- Advanced compositing methods:
+  - Median, Mean, Min, Max composites
+  - Percentile-based composites
+  - Quality mosaic (cloud probability)
+  - Greenest pixel (max NDVI)
+  - Most recent pixel
+  - Seasonal and multi-temporal composites
+  - Outlier removal
+  - Composite quality metrics
+- Zonal statistics over polygons:
+  - Multiple statistics (mean, sum, min, max, median, stddev, variance)
+  - Zonal histograms and frequency tables
+  - Zonal time series
+  - Percentiles and cross-tabulation
+  - Export to CSV and FeatureCollection
 
 ### Planned 📋
 
-**Advanced Features**:
-- Time-series analysis and trend detection
-- Advanced compositing methods (median, quality mosaics)
-- Zonal statistics over polygons
+**Future Enhancements**:
+- Machine learning integrations
+- Real-time data streaming
+- Advanced visualization helpers
+- Additional climate models
 
 ## Contributing
 

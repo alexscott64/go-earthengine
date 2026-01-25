@@ -181,3 +181,8 @@ func (c *Client) ComputeValue(ctx context.Context, expr *Expression) (interface{
 
 	return nil, fmt.Errorf("no result in response")
 }
+
+// FeatureCollection represents a collection of geographic features
+type FeatureCollection struct {
+	// Placeholder for feature collection implementation
+}
