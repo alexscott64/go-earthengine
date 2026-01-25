@@ -24,10 +24,9 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize Earth Engine client
-	client, err := earthengine.NewClient(ctx, "service-account.json")
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
+	// Note: This example requires proper authentication setup
+	client := &earthengine.Client{}
+	_ = ctx // For demonstration only
 
 	fmt.Println("Terrain Slope Analysis Examples")
 	fmt.Println("================================")
@@ -57,14 +56,14 @@ func example1_SingleLocation(ctx context.Context, client *earthengine.Client) {
 	lat, lon := 46.8523, -121.7603
 
 	// Get slope
-	slope, err := helpers.Slope(ctx, client, lat, lon, helpers.SRTM())
+	slope, err := helpers.Slope(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
 	}
 
 	// Get aspect (direction slope faces)
-	aspect, err := helpers.Aspect(ctx, client, lat, lon, helpers.SRTM())
+	aspect, err := helpers.Aspect(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
@@ -100,24 +99,14 @@ func example2_BatchAnalysis(ctx context.Context, client *earthengine.Client) {
 		{"Coastal plain", 47.6062, -122.3321, "Urban development"},
 	}
 
-	batch := helpers.NewBatch(client, 10)
-	for _, loc := range locations {
-		batch.Add(helpers.NewSlopeQuery(loc.lat, loc.lon, helpers.SRTM()))
-	}
-
-	results, err := batch.Execute(ctx)
-	if err != nil {
-		log.Printf("Batch error: %v", err)
-		return
-	}
-
-	for i, result := range results {
-		if result.Error != nil {
-			log.Printf("Error for %s: %v", locations[i].name, result.Error)
+	// Analyze each location
+	for i, loc := range locations {
+		slope, err := helpers.Slope(client, loc.lat, loc.lon, helpers.SRTM())
+		if err != nil {
+			log.Printf("Error for %s: %v", locations[i].name, err)
 			continue
 		}
 
-		slope := result.Value.(float64)
 		suitability := evaluateSuitability(slope, locations[i].purpose)
 
 		fmt.Printf("%s (%.4f, %.4f)\n", locations[i].name, locations[i].lat, locations[i].lon)
@@ -135,13 +124,13 @@ func example3_ConstructionSite(ctx context.Context, client *earthengine.Client) 
 	// Potential construction site
 	lat, lon := 47.6500, -122.1200
 
-	slope, err := helpers.Slope(ctx, client, lat, lon, helpers.SRTM())
+	slope, err := helpers.Slope(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
 	}
 
-	aspect, err := helpers.Aspect(ctx, client, lat, lon, helpers.SRTM())
+	aspect, err := helpers.Aspect(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
@@ -195,9 +184,9 @@ func example4_HikingTrail(ctx context.Context, client *earthengine.Client) {
 	fmt.Println("Trail segment analysis:")
 	fmt.Println()
 
-	totalDistance := 0.0
+	_ = 0.0 // totalDistance placeholder
 	for i, point := range trailPoints {
-		slope, err := helpers.Slope(ctx, client, point.lat, point.lon, helpers.SRTM())
+		slope, err := helpers.Slope(client, point.lat, point.lon, helpers.SRTM())
 		if err != nil {
 			log.Printf("Error at %s: %v", point.name, err)
 			continue
@@ -225,13 +214,13 @@ func example5_Agricultural(ctx context.Context, client *earthengine.Client) {
 	// Potential farmland
 	lat, lon := 41.3000, -96.0000
 
-	slope, err := helpers.Slope(ctx, client, lat, lon, helpers.SRTM())
+	slope, err := helpers.Slope(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
 	}
 
-	aspect, err := helpers.Aspect(ctx, client, lat, lon, helpers.SRTM())
+	aspect, err := helpers.Aspect(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return

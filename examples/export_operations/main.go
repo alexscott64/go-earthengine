@@ -24,10 +24,9 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize Earth Engine client
-	client, err := earthengine.NewClient(ctx, "service-account.json")
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
+	// Note: This example requires proper authentication setup
+	client := &earthengine.Client{}
+	_ = ctx // For demonstration only
 
 	fmt.Println("Earth Engine Export Operations Examples")
 	fmt.Println("=======================================")
@@ -62,12 +61,6 @@ func example1_SimpleImageExport(ctx context.Context, client *earthengine.Client)
 	// Create an NDVI composite
 	startDate := "2023-06-01"
 	endDate := "2023-08-31"
-
-	// Build image collection and compute NDVI composite
-	collection := client.ImageCollection("COPERNICUS/S2_SR")
-	filtered := collection.
-		FilterDate(startDate, endDate).
-		FilterMetadata("CLOUDY_PIXEL_PERCENTAGE", "less_than", 20)
 
 	// Create median composite
 	composite := helpers.Composite(client, startDate, endDate,
@@ -371,6 +364,7 @@ func exportNDVITimeSeries(ctx context.Context, client *earthengine.Client, start
 
 	// Calculate NDVI for each image
 	// In a real implementation, you would map an NDVI calculation over the collection
+	_ = collection // Placeholder for demonstration
 
 	// Export as multi-band image or video
 	return helpers.ExportImageAsync(ctx, client, nil,

@@ -26,10 +26,9 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize Earth Engine client
-	client, err := earthengine.Client(ctx, "service-account.json")
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
+	// Note: This example requires proper authentication setup
+	client := &earthengine.Client{}
+	_ = ctx // For demonstration only
 
 	fmt.Println("Sun Position Analysis Examples")
 	fmt.Println("===============================")
@@ -62,7 +61,7 @@ func example1_CurrentSunPosition(ctx context.Context, client *earthengine.Client
 	lat, lon := 45.5152, -122.6784
 	now := time.Now()
 
-	sunPos, err := helpers.SunPosition(ctx, client, lat, lon, now)
+	sunPos, err := helpers.CalculateSunPosition(lat, lon, now)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return
@@ -94,7 +93,7 @@ func example2_DailySunPath(ctx context.Context, client *earthengine.Client) {
 	for hour := 0; hour < 24; hour += 2 {
 		t := time.Date(date.Year(), date.Month(), date.Day(), hour, 0, 0, 0, date.Location())
 
-		sunPos, err := helpers.SunPosition(ctx, client, lat, lon, t)
+		sunPos, err := helpers.CalculateSunPosition(lat, lon, t)
 		if err != nil {
 			continue
 		}
@@ -107,17 +106,17 @@ func example2_DailySunPath(ctx context.Context, client *earthengine.Client) {
 	}
 
 	// Get sunrise and sunset times
-	sunrise, err := helpers.Sunrise(ctx, client, lat, lon, date)
+	sunrise, err := helpers.SunriseTime(lat, lon, date)
 	if err == nil {
 		fmt.Printf("\nSunrise: %s\n", sunrise.Format("15:04:05"))
 	}
 
-	sunset, err := helpers.Sunset(ctx, client, lat, lon, date)
+	sunset, err := helpers.SunsetTime(lat, lon, date)
 	if err == nil {
 		fmt.Printf("Sunset: %s\n", sunset.Format("15:04:05"))
 	}
 
-	dayLength, err := helpers.DayLength(ctx, client, lat, lon, date)
+	dayLength, err := helpers.DayLength(lat, date)
 	if err == nil {
 		fmt.Printf("Day Length: %.1f hours\n", dayLength)
 	}
@@ -132,14 +131,14 @@ func example3_SolarPanelOptimization(ctx context.Context, client *earthengine.Cl
 	lat, lon := 45.5152, -122.6784
 
 	// Get terrain aspect (which direction the slope faces)
-	aspect, err := helpers.Aspect(ctx, client, lat, lon, helpers.SRTM())
+	aspect, err := helpers.Aspect(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error getting aspect: %v", err)
 		return
 	}
 
 	// Get terrain slope
-	slope, err := helpers.Slope(ctx, client, lat, lon, helpers.SRTM())
+	slope, err := helpers.Slope(client, lat, lon, helpers.SRTM())
 	if err != nil {
 		log.Printf("Error getting slope: %v", err)
 		return
@@ -177,7 +176,7 @@ func example3_SolarPanelOptimization(ctx context.Context, client *earthengine.Cl
 	fmt.Println()
 
 	for _, date := range dates {
-		sunPos, err := helpers.SunPosition(ctx, client, lat, lon, date)
+		sunPos, err := helpers.CalculateSunPosition(lat, lon, date)
 		if err != nil {
 			continue
 		}
@@ -193,10 +192,10 @@ func example3_SolarPanelOptimization(ctx context.Context, client *earthengine.Cl
 	avgSunHours := avgDayLength * 0.6 // Account for clouds, angle
 	panelEfficiency := 0.18 // 18% efficient panels
 	panelArea := 1.6 // Square meters per panel
-	numPanels := 20
+	numPanels := 20.0
 
 	annualEnergy := avgSunHours * 365 * panelEfficiency * panelArea * numPanels * 1000 // Wh
-	fmt.Printf("  Configuration: %d panels (%.0f m² total)\n", numPanels, float64(numPanels)*panelArea)
+	fmt.Printf("  Configuration: %.0f panels (%.0f m² total)\n", numPanels, numPanels*panelArea)
 	fmt.Printf("  Estimated Annual Production: %.0f kWh\n", annualEnergy/1000)
 	fmt.Printf("  Average Daily Production: %.1f kWh\n", annualEnergy/1000/365)
 
@@ -216,8 +215,8 @@ func example4_PhotographyPlanning(ctx context.Context, client *earthengine.Clien
 	fmt.Println()
 
 	// Golden hour times (sun elevation 0-6 degrees)
-	sunrise, _ := helpers.Sunrise(ctx, client, lat, lon, date)
-	sunset, _ := helpers.Sunset(ctx, client, lat, lon, date)
+	sunrise, _ := helpers.SunriseTime(lat, lon, date)
+	sunset, _ := helpers.SunsetTime(lat, lon, date)
 
 	fmt.Println("Golden Hour Times:")
 	fmt.Printf("  Morning Golden Hour: %s - %s\n",
@@ -239,10 +238,10 @@ func example4_PhotographyPlanning(ctx context.Context, client *earthengine.Clien
 	fmt.Println()
 
 	// Solar noon (best for landscape shots)
-	solarNoon, _ := helpers.SolarNoon(ctx, client, lat, lon, date)
+	solarNoon, _ := helpers.SolarNoon(lon, date)
 	fmt.Printf("Solar Noon: %s\n", solarNoon.Format("15:04"))
 
-	sunPos, _ := helpers.SunPosition(ctx, client, lat, lon, solarNoon)
+	sunPos, _ := helpers.CalculateSunPosition(lat, lon, solarNoon)
 	fmt.Printf("Sun Elevation at Noon: %.1f degrees\n", sunPos.Elevation)
 	fmt.Println()
 
@@ -277,10 +276,10 @@ func example5_SeasonalAnalysis(ctx context.Context, client *earthengine.Client) 
 	fmt.Println("-----------------|------------|----------------|-----------|----------")
 
 	for _, season := range seasons {
-		dayLength, _ := helpers.DayLength(ctx, client, lat, lon, season.date)
-		sunPos, _ := helpers.SunPosition(ctx, client, lat, lon, season.date)
-		sunrise, _ := helpers.Sunrise(ctx, client, lat, lon, season.date)
-		sunset, _ := helpers.Sunset(ctx, client, lat, lon, season.date)
+		dayLength, _ := helpers.DayLength(lat, season.date)
+		sunPos, _ := helpers.CalculateSunPosition(lat, lon, season.date)
+		sunrise, _ := helpers.SunriseTime(lat, lon, season.date)
+		sunset, _ := helpers.SunsetTime(lat, lon, season.date)
 
 		fmt.Printf("%-16s | %5.1f hrs | %11.1f°   | %s | %s\n",
 			season.name,
@@ -313,31 +312,20 @@ func example6_BatchAnalysis(ctx context.Context, client *earthengine.Client) {
 	fmt.Printf("Date: %s (Summer Solstice, Solar Noon)\n", date.Format("2006-01-02"))
 	fmt.Println()
 
-	batch := helpers.NewBatch(client, 10)
-	for _, loc := range locations {
-		batch.Add(helpers.NewSunPositionQuery(loc.lat, loc.lon, date))
-	}
-
-	results, err := batch.Execute(ctx)
-	if err != nil {
-		log.Printf("Batch error: %v", err)
-		return
-	}
-
 	fmt.Println("Location              | Latitude | Day Length | Sun Elevation")
 	fmt.Println("----------------------|----------|------------|---------------")
 
-	for i, result := range results {
-		if result.Error != nil {
+	for _, loc := range locations {
+		sunPos, err := helpers.CalculateSunPosition(loc.lat, loc.lon, date)
+		if err != nil {
 			continue
 		}
 
-		sunPos := result.Value.(helpers.SunPosition)
-		dayLength, _ := helpers.DayLength(ctx, client, locations[i].lat, locations[i].lon, date)
+		dayLength, _ := helpers.DayLength(loc.lat, date)
 
 		fmt.Printf("%-21s | %7.2f° | %7.1f hrs | %10.1f°\n",
-			locations[i].name,
-			locations[i].lat,
+			loc.name,
+			loc.lat,
 			dayLength,
 			sunPos.Elevation)
 	}
